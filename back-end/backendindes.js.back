@@ -1,0 +1,76 @@
+const express = require("express");
+const axios = require("axios");
+const cors = require("cors");
+const app = express();
+const corsOptions = {
+	origin: "http://localhost:3000", // Replace with your frontend URL
+	methods: "GET,POST,PUT,DELETE",
+	allowedHeaders: "Content-Type,Authorization",
+};
+
+app.use(cors());
+const PORT = 5000;
+
+const API_URL = "https://echo-serv.tbxnet.com/v1/secret";
+const API_KEY = "Bearer aSuperSecretKey";
+
+app.get("/", (req, res) => {
+	res.send("API is working");
+});
+app.get("/files/list", async (req, res) => {
+	try {
+		const response = await axios.get(`${API_URL}/files`, {
+			headers: { Authorization: API_KEY },
+		});
+		res.json(response.data.files);
+	} catch (error) {
+		res.status(500).json({ error: "Failed to fetch files list" });
+	}
+});
+app.get("/files/data", async (req, res) => {
+	try {
+		const { fileName } = req.query;
+		const files = fileName
+			? [fileName]
+			: (
+					await axios.get(`${API_URL}/files`, {
+						headers: { Authorization: API_KEY },
+					})
+			  ).data.files;
+
+		const data = [];
+
+		for (const file of files) {
+			try {
+				const fileResponse = await axios.get(`${API_URL}/file/${file}`, {
+					headers: { Authorization: API_KEY },
+				});
+				const fileData = parseCSV(fileResponse.data);
+				data.push({ file, lines: fileData });
+			} catch (error) {
+				// Handle errors for individual file downloads
+			}
+		}
+		console.log(data);
+
+		res.json(data);
+	} catch (error) {
+		res.status(500).json({ error: "Failed to fetch data" });
+	}
+});
+
+function parseCSV(data) {
+	const lines = data.split("\n").slice(1); // Skip header
+	return lines
+		.map((line) => {
+			const [file, text, number, hex] = line.split(",");
+			if (!file || !text || !number || !hex) return null; // Skip invalid lines
+			return { text, number: parseInt(number, 10), hex };
+		})
+		.filter(Boolean); // Remove null entries
+}
+module.exports = app;
+
+app.listen(PORT, () => {
+	console.log(`Server is running on http://localhost:${PORT}`);
+});
