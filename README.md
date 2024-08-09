@@ -44,14 +44,16 @@ Backend Endpoints:
       -GET /files/list - Get a list of available files.
       -GET /files/data?fileName=<fileName> - Get data from a specific file.
 
+### Run The Project :
+
+-docker compose up --build
+
 ### Test :
 
 ```
     1.Backend
       -cd back-end
       -npm test
-
-
 ```
 
 ```
